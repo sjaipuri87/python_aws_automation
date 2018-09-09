@@ -2,6 +2,10 @@ import boto3;
 import sys
 import click
 from botocore.exceptions import ClientError
+from pathlib import Path
+import mimetypes
+import platform
+import os
 
 session = boto3.Session(profile_name='pythonAutmation')
 s3 = session.resource('s3')
@@ -69,6 +73,39 @@ def setup_bucket(bucket):
         }
     })
     return
+
+def upload_file(s3_bucket, path, key):
+    content_type = mimetypes.guess_type(key)[0] or 'text/plain'
+    s3_bucket.upload_file(
+        path,
+        key,
+        ExtraArgs={
+        'ContentType': 'text/html'
+        })
+
+def convertPath(path):
+    separator = os.path.sep
+    #print(separator)
+    if separator != '/':
+        path = path.replace(separator,'/')
+    return path
+
+@cli.command('sync')
+@click.argument('pathname', type=click.Path(exists=True))
+@click.argument('bucket')
+def sync(pathname, bucket):
+    "Sync contents of PATHNAME to BUCKET"
+    s3_bucket = s3.Bucket(bucket)
+    root = Path(pathname).expanduser().resolve()
+    def handle_directory(target):
+        for p in target.iterdir():
+            if p.is_dir(): handle_directory(p)
+            if p.is_file():
+                upload_file(s3_bucket, str(p), convertPath(str(p.relative_to(root)))) ##Using convert path to hand windows dir
+                #print("Path: {}\n Key: {}".format(p, p.relative_to(root)))
+    print("Website Sync is done")
+
+    handle_directory(root)
 
 
 if __name__ == '__main__':
