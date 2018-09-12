@@ -9,6 +9,7 @@ import click
 import mimetypes
 import platform
 import boto3
+import util
 
 from bucket import BucketManager
 
@@ -58,6 +59,7 @@ def setup_bucket(bucket):
 def sync(pathname, bucket):
     """Sync contents of PATHNAME to BUCKET"""
     bucket_manager.sync(pathname, bucket)
+    print(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucket)))
     print("Website Sync is done")
 
 if __name__ == '__main__':
